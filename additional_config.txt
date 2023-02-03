@@ -101,7 +101,7 @@ return {
 
 echo "lua-package-path = /home/ec2-user/.luarocks/share/lua/5.1/?.lua;;" | sudo tee -a /etc/kong/kong.conf
 echo "plugins = bundled,jwt-auth-rbac" | sudo tee -a /etc/kong/kong.conf
-sudo nano /etc/kong/kong.conf
+--sudo nano /etc/kong/kong.conf
 
 
 sudo /usr/local/bin/kong restart
@@ -162,11 +162,11 @@ curl -i -X POST http://localhost:8001/services/owen_wilson/routes \
 
 
 
-#enable rate limiting 5 per minute
-curl -i -X POST http://localhost:8001/plugins \
-  --data name=rate-limiting \
-  --data config.minute=5 \
-  --data config.policy=local
+#enable rate limiting 5 per minute on a single route
+curl -X POST http://localhost:8001/routes/example_route/plugins \
+  --data "name=rate-limiting"  \
+    --data "config.minute=5" \
+    --data "config.policy=local"
 
 
 # test rate limiting
@@ -184,6 +184,7 @@ curl -X POST http://localhost:8001/services/owen_wilson/plugins \
     --data "config.cache_ttl=10" \
     --data "config.strategy=memory"
 
+-- demo caching feature in Insomnia UI
 
 
 #configure request termination for maintenance windows
@@ -192,6 +193,20 @@ curl -X POST http://localhost:8001/routes/swapi_people_route/plugins \
     --data "config.status_code=403" \
     --data "config.message=This service is termporarily down for maintenance" \
     --data "enabled=false"
+
+
+-- demo maintenance window (enable plugin, validate, disable plugin, validate)
+
+
+
+#configure bot detection plugin globally
+curl -X POST http://localhost:8001/plugins/ \
+  --data "name=bot-detection" \
+  --data "config.deny=swapi"
+
+-- demo bot detection plugin
+-- create User-Agent / swapi http header
+
 
 
 #configure http-log / new relic integration
@@ -206,13 +221,10 @@ curl -X POST http://localhost:8001/plugins/ \
     --data config.custom_fields_by_lua.team="return 'enterprise architecture'" \
     --data config.custom_fields_by_lua.source="return 'kong-poc'"
 
+-- demo (generate some load and view the data in new relic)
 
 
 
-
-#configure bot detection plugin globally
-curl -X POST http://localhost:8001/plugins/ \
-  --data "name=bot-detection" 
 
 
 #create jwt-auth-rbac plugin

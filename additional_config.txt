@@ -56,16 +56,17 @@ cd /home/ec2-user/.luarocks/share/lua/5.1/kong/plugins/jwt-auth-rbac
 
 sudo nano handler.lua
 
+local JWTAuthHandler = {
+  VERSION  = "0.1.0",
+  PRIORITY = 950,
+}
+
 --local BasePlugin = require "
 --local JWTAuthHandler = BasePlugin:extend()
 --JWTAuthHandler.PRIORITY = 950
 --JWTAuthHandler.VERSION = "0.1.0"
 
 
-local JWTAuthHandler = {
-  VERSION  = "0.1.0",
-  PRIORITY = 950,
-}
 
 #modify schema.lua file
 sudo cp schema.lua schema.lua.bak
@@ -122,50 +123,6 @@ curl -i -X POST http://localhost:8001/services/example_service/routes \
   curl -X GET http://localhost:8000/mock/requests
 
 
-  #create consumers
-curl -d "username=acme_trucking&custom_id=000001" http://localhost:8001/consumers/
-curl -d "username=acme_waste&custom_id=000002" http://localhost:8001/consumers/
-curl -d "username=acme_swift&custom_id=000003" http://localhost:8001/consumers/
-
-
-#create jwt-auth-rbac plugin
-curl -X POST http://localhost:8001/plugins \
-    --data 'name=jwt-auth-rbac' \
-    --data 'config.roles_claim_name=groups' \
-    --data 'config.roles=admin,read,write' \
-    --data 'config.msg_error_any=You do not have the necessary role to use this service' \
-    --data 'config.msg_error_all=You do not have the necessary role to use this service' \
-    --data 'config.msg_error_not_roles_claimed=You do not have the necessary role to use this service' \
-    --data 'config.policy=all'
-
-
-#configure http-log / new relic integration
-curl -X POST http://localhost:8001/plugins/ \
-  --data "name=http-log"  \
-    --data "config.http_endpoint=https://log-api.newrelic.com/log/v1?Api-Key=<INTENTIONALLY REMOVED>" \
-    --data "config.method=POST" \
-    --data "config.timeout=1000" \
-    --data "config.keepalive=1000" \
-    --data "config.flush_timeout=2" \
-    --data "config.retry_count=15" \
-    --data config.custom_fields_by_lua.team="return 'enterprise architecture'" \
-    --data config.custom_fields_by_lua.source="return 'kong-poc'"
-
-
-#enable rate limiting plugin
-#enable rate limiting 5 per minute
-curl -i -X POST http://localhost:8001/plugins \
-  --data name=rate-limiting \
-  --data config.minute=5 \
-  --data config.policy=local
-
-# test rate limiting
-for _ in {1..11}; do curl -s -i http://localhost:8000/mock/request; echo; sleep 1; done
-
-
-https://owen-wilson-wow-api.onrender.com/wows/random
-
-
 #create service
 curl -i -s -X POST http://localhost:8001/services \
   --data name=swapi_service \
@@ -190,3 +147,91 @@ curl -i -X POST http://localhost:8001/services/swapi_service/routes \
   --data 'paths[]=/films' \
   --data name=swapi_films_route \
   --data strip_path=false
+
+
+
+#enable rate limiting 5 per minute
+curl -i -X POST http://localhost:8001/plugins \
+  --data name=rate-limiting \
+  --data config.minute=5 \
+  --data config.policy=local
+
+
+# test rate limiting
+for _ in {1..11}; do curl -s -i http://localhost:8000/mock/request; echo; sleep 1; done
+
+
+
+#configure http-log / new relic integration
+curl -X POST http://localhost:8001/plugins/ \
+  --data "name=http-log"  \
+    --data "config.http_endpoint=https://log-api.newrelic.com/log/v1?Api-Key=<INTENTIONALLY REMOVED>" \
+    --data "config.method=POST" \
+    --data "config.timeout=1000" \
+    --data "config.keepalive=1000" \
+    --data "config.flush_timeout=2" \
+    --data "config.retry_count=15" \
+    --data config.custom_fields_by_lua.team="return 'enterprise architecture'" \
+    --data config.custom_fields_by_lua.source="return 'kong-poc'"
+
+    
+
+
+    
+https://owen-wilson-wow-api.onrender.com/wows/random
+
+
+#create jwt-auth-rbac plugin
+curl -X POST http://localhost:8001/plugins \
+    --data 'name=jwt-auth-rbac' \
+    --data 'config.roles_claim_name=groups' \
+    --data 'config.roles=admin,read,write' \
+    --data 'config.msg_error_any=You do not have the necessary role to use this service' \
+    --data 'config.msg_error_all=You do not have the necessary role to use this service' \
+    --data 'config.msg_error_not_roles_claimed=You do not have the necessary role to use this service' \
+    --data 'config.policy=all'
+
+
+
+
+
+#enable jwt on films route
+curl -X POST http://localhost:8001/routes/swapi_films_route/plugins \
+  --data "name=jwt" 
+
+
+#create consumers
+curl -d "username=acme_trucking&custom_id=000001" http://localhost:8001/consumers/
+curl -d "username=acme_waste&custom_id=000002" http://localhost:8001/consumers/
+curl -d "username=acme_swift&custom_id=000003" http://localhost:8001/consumers/
+
+
+#create consumer credential
+curl -X POST http://localhost:8001/consumers/acme_trucking/jwt -H "Content-Type: application/x-www-form-urlencoded"
+
+
+#craft JWT token using output
+
+{
+	"id": "c2ac82a8-2b54-4b09-88e8-f15ffa68acb9",
+	"secret": "kNcLwpW1xgB8IHgrjUm2J7SdNrlcQJza",
+	"key": "ix9FQTSvvS30JZV6T7BgJAczFSlOCSJA",
+	"tags": null,
+	"rsa_public_key": null,
+	"consumer": {
+		"id": "9931f32e-96b0-461f-a670-92e783cdf44b"
+	},
+	"algorithm": "HS256",
+	"created_at": 1675418675
+}
+
+
+{
+    "typ": "JWT",
+    "alg": "HS256"
+}
+
+{
+    "iss": "ix9FQTSvvS30JZV6T7BgJAczFSlOCSJA"
+}
+

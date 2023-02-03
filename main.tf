@@ -1,3 +1,15 @@
+
+/*
+Post Network Configuration
+Need to enable Public IP Address Delegation on one of the subnets
+Need the subnet ID for that Public Subnet and make sure it's in the correct AZ
+
+subnet-009325653702f45f8
+
+Need to create a security group and provide ID
+
+*/
+
 terraform {
   required_providers {
     aws = {
@@ -14,6 +26,16 @@ provider "aws" {
 }
 
 locals {
+  sg_name = "sg-Kong-EA-${var.env_name}"
+  ec2_ami = "ami-0d593311db5abb72b"
+  ec2_instance_type = "t2.micro"
+  ec2_az = "us-west-2a"
+
+  ec2_sgs = ["sg-0c007ab49c8dd4dc9"] 
+  ec2_subnet = "subnet-009325653702f45f8"
+
+  ec2_keypair = "kong-ea-keypair"
+
   tags = {
     Name                     = "Kong-EA"
     product                  = "kong"
@@ -35,14 +57,39 @@ locals {
   }
 }
 
+resource "aws_security_group" "Kong-EA" {
+  name        = "Kong-EA-Sandbox-SG"
+  description = "Kong-EA Security Group"
+  vpc_id      = "vpc-08b1aac1c6a2de169"
+
+  ingress {
+    description = "Inbound traffic from within the security group"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    self        = true
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    self        = true
+  }
+
+  tags = local.tags
+}
+
 
 resource "aws_instance" "Kong-EA" {
-  ami                    = "ami-0d593311db5abb72b"
-  instance_type          = "t2.micro"
-  availability_zone      = "us-west-2a"
-  vpc_security_group_ids = ["sg-01d2a472f0fb70c24"]
-  subnet_id              = "subnet-06e3840091064add2"
-  key_name               = "kong-ea-keypair"
+  ami                    = local.ec2_ami
+  instance_type          = local.ec2_instance_type
+  availability_zone      = local.ec2_az
+  vpc_security_group_ids = ["sg-0c007ab49c8dd4dc9"]
+  subnet_id              = "subnet-009325653702f45f8"
+  key_name               = local.ec2_keypair
 
   user_data = file("apache_config.sh")
 
@@ -54,7 +101,7 @@ resource "aws_instance" "Kong-EA" {
 
 # create and attach EBS volume
 resource "aws_ebs_volume" "data-vol" {
-  availability_zone = "us-west-2a"
+  availability_zone = local.ec2_az
   size              = 8
   tags              = local.tags
 }
@@ -65,3 +112,5 @@ resource "aws_volume_attachment" "kong-data-volume" {
   volume_id   = aws_ebs_volume.data-vol.id
   instance_id = aws_instance.Kong-EA.id
 }
+
+

@@ -119,9 +119,6 @@ curl -i -X POST http://localhost:8001/services/example_service/routes \
   --data 'paths[]=/mock' \
   --data name=example_route
 
-  #confirm setup
-  curl -X GET http://localhost:8000/mock/requests
-
 
 #create service
 curl -i -s -X POST http://localhost:8001/services \
@@ -149,6 +146,21 @@ curl -i -X POST http://localhost:8001/services/swapi_service/routes \
   --data strip_path=false
 
 
+  
+#create service
+curl -i -s -X POST http://localhost:8001/services \
+  --data name=owen_wilson \
+  --data url='https://owen-wilson-wow-api.onrender.com/wows'
+
+
+#create route
+curl -i -X POST http://localhost:8001/services/owen_wilson/routes \
+  --data 'paths[]=/random' \
+  --data name=owen_route \
+  --data strip_path=false
+
+
+
 
 #enable rate limiting 5 per minute
 curl -i -X POST http://localhost:8001/plugins \
@@ -160,6 +172,26 @@ curl -i -X POST http://localhost:8001/plugins \
 # test rate limiting
 for _ in {1..11}; do curl -s -i http://localhost:8000/mock/request; echo; sleep 1; done
 
+
+
+#configure proxy cache plugin
+curl -X POST http://localhost:8001/services/owen_wilson/plugins \
+    --data "name=proxy-cache"  \
+    --data "config.response_code=200" \
+    --data "config.request_method=GET" \
+    --data "config.request_method=HEAD" \
+    --data "config.content_type=application/json; charset=utf-8" \
+    --data "config.cache_ttl=10" \
+    --data "config.strategy=memory"
+
+
+
+#configure request termination for maintenance windows
+curl -X POST http://localhost:8001/routes/swapi_people_route/plugins \
+  --data "name=request-termination"  \
+    --data "config.status_code=403" \
+    --data "config.message=This service is termporarily down for maintenance" \
+    --data "enabled=false"
 
 
 #configure http-log / new relic integration
@@ -174,11 +206,13 @@ curl -X POST http://localhost:8001/plugins/ \
     --data config.custom_fields_by_lua.team="return 'enterprise architecture'" \
     --data config.custom_fields_by_lua.source="return 'kong-poc'"
 
-    
 
 
-    
-https://owen-wilson-wow-api.onrender.com/wows/random
+
+
+#configure bot detection plugin globally
+curl -X POST http://localhost:8001/plugins/ \
+  --data "name=bot-detection" 
 
 
 #create jwt-auth-rbac plugin
@@ -195,13 +229,29 @@ curl -X POST http://localhost:8001/plugins \
 
 
 
+#create key-auth plugin on a route
+curl -X POST http://localhost:8001/routes/swapi_films_route/plugins \
+  --data "name=key-auth"  \
+    --data "config.key_names=apikey"
+
+#create consumer and credential
+curl -d "username=acme_trucking&custom_id=000001" http://localhost:8001/consumers/
+curl -X POST http://localhost:8001/consumers/acme_trucking/key-auth
+
+--TZ5bzd8NG2USfmFERFnu8FfTYit3c37b
+
+-- add apikey and value as a header in Insomnia
+
+
+
+
+
 #enable jwt on films route
 curl -X POST http://localhost:8001/routes/swapi_films_route/plugins \
   --data "name=jwt" 
 
 
-#create consumers
-curl -d "username=acme_trucking&custom_id=000001" http://localhost:8001/consumers/
+
 curl -d "username=acme_waste&custom_id=000002" http://localhost:8001/consumers/
 curl -d "username=acme_swift&custom_id=000003" http://localhost:8001/consumers/
 

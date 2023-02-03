@@ -104,3 +104,62 @@ sudo nano /etc/kong/kong.conf
 
 
 sudo /usr/local/bin/kong restart
+
+
+
+
+#create service
+curl -i -s -X POST http://localhost:8001/services \
+  --data name=example_service \
+  --data url='http://mockbin.org'
+
+#create route
+curl -i -X POST http://localhost:8001/services/example_service/routes \
+  --data 'paths[]=/mock' \
+  --data name=example_route
+
+  #confirm setup
+  curl -X GET http://localhost:8000/mock/requests
+
+
+  #create consumers
+curl -d "username=acme_trucking&custom_id=000001" http://localhost:8001/consumers/
+curl -d "username=acme_waste&custom_id=000002" http://localhost:8001/consumers/
+curl -d "username=acme_swift&custom_id=000003" http://localhost:8001/consumers/
+
+
+#create jwt-auth-rbac plugin
+curl -X POST http://localhost:8001/plugins \
+    --data 'name=jwt-auth-rbac' \
+    --data 'config.roles_claim_name=groups' \
+    --data 'config.roles=admin,read,write' \
+    --data 'config.msg_error_any=You do not have the necessary role to use this service' \
+    --data 'config.msg_error_all=You do not have the necessary role to use this service' \
+    --data 'config.msg_error_not_roles_claimed=You do not have the necessary role to use this service' \
+    --data 'config.policy=all'
+
+
+#configure http-log / new relic integration
+curl -X POST http://localhost:8001/plugins/ \
+  --data "name=http-log"  \
+    --data "config.http_endpoint=https://log-api.newrelic.com/log/v1?Api-Key=<INTENTIONALLY REMOVED>" \
+    --data "config.method=POST" \
+    --data "config.timeout=1000" \
+    --data "config.keepalive=1000" \
+    --data "config.flush_timeout=2" \
+    --data "config.retry_count=15" \
+    --data config.custom_fields_by_lua.team="return 'enterprise architecture'" \
+    --data config.custom_fields_by_lua.source="return 'kong-poc'"
+
+
+#enable rate limiting plugin
+#enable rate limiting 5 per minute
+curl -i -X POST http://localhost:8001/plugins \
+  --data name=rate-limiting \
+  --data config.minute=5 \
+  --data config.policy=local
+
+# test rate limiting
+for _ in {1..11}; do curl -s -i http://localhost:8000/mock/request; echo; sleep 1; done
+
+

@@ -163,3 +163,30 @@ curl -i -X POST http://localhost:8001/plugins \
 for _ in {1..11}; do curl -s -i http://localhost:8000/mock/request; echo; sleep 1; done
 
 
+https://owen-wilson-wow-api.onrender.com/wows/random
+
+
+#create service
+curl -i -s -X POST http://localhost:8001/services \
+  --data name=swapi_service \
+  --data url='http://swapi.dev/api/'
+
+
+#create route
+curl -i -X POST http://localhost:8001/services/swapi_service/routes \
+  --data 'paths[]=/people' \
+  --data name=swapi_people_route \
+  --data strip_path=false
+
+
+#create route
+curl -i -X POST http://localhost:8001/services/swapi_service/routes \
+  --data 'paths[]=/planets' \
+  --data name=swapi_planets_route \
+  --data strip_path=false
+
+ #create route
+curl -i -X POST http://localhost:8001/services/swapi_service/routes \
+  --data 'paths[]=/films' \
+  --data name=swapi_films_route \
+  --data strip_path=false

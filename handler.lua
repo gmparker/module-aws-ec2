@@ -8,40 +8,34 @@ local constants = require "kong.constants"
 local jwt_decoder = require "kong.plugins.jwt.jwt_parser"
 local responses = kong.response
 
-local ngx_error = ngx.ERR
-local ngx_debug = ngx.DEBUG
-local ngx_log = ngx.log
+-- local ngx_error = ngx.ERR
+-- local ngx_debug = ngx.DEBUG
+-- local ngx_log = ngx.log
 
 local policy_ALL = 'all'
 local policy_ANY = 'any'
 
-function JWTAuthHandler:new()
-  JWTAuthHandler.super.new(self, "jwt-auth-rbac")
-end
-
--- Implement logic for the init_worker phase here (http/stream)
-function JWTAuthHandler:init_worker()
-    kong.log("init_worker")
-    return kong.response.exit(403, {
-        message = "Aborting furing the init_worker_phase"
-      })
-end
+-- function JWTAuthHandler:new()
+--   JWTAuthHandler.super.new(self, "jwt-auth-rbac")
+-- end
 
 
 --- Filter a table
 -- @param filterFnc (function) filter function
 -- @return (table) the filtered table 
 function table:filter(filterFnc)
-  local result = {}
+  local result = {};
 
   for k, v in ipairs(self) do
       if filterFnc(v, k, self) then
-          table.insert(result, v)
+          table.insert(result, v);
       end
   end
 
   return result
 end
+
+
 
 --- Get index of a value at a table.
 -- @param any value
@@ -49,7 +43,7 @@ end
 function table:find(value)
   for k, v in ipairs(self) do
       if v == value then
-          return k
+          return k;
       end
   end
 end
@@ -116,11 +110,16 @@ end
 
 
 -- Implement logic for the access phase here (http)
-function JWTAuthHandler:access(conf)
-  JWTAuthHandler.super.access(self)
+function JWTAuthHandler:access(config)
+--  JWTAuthHandler.super.access(self)
 
   -- get the JWT from the Nginx context
-  local token = ngx.ctx.authenticated_jwt_token
+  --local token = ngx.ctx.authenticated_jwt_token
+  
+  local token = kong.ctx.shared.authenticated_jwt_token
+
+  --local token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImlzcyI6IjRRekVycWFBR2xEendCWTJmcEZJT3MyQnk5eHVwREwxIn0.eyJleHAiOjE2OTk5OTk5OTksIm5hbWUiOiJMeXR4Iiwicm9sZXMiOiJhZG1pbiwgcmVhZCwgd3JpdGUifQ.87X_o2q_ni_09jueQfCKWTM-5Q9M93LdQzZ6J644tFE'
+    
   if not token then
     ngx_log(ngx_error, "[jwt-auth plugin] Cannot get JWT token, add the ",
                        "JWT plugin to be able to use the JWT-Auth plugin")
@@ -137,13 +136,13 @@ function JWTAuthHandler:access(conf)
     return kong.response.exit(401, { message = "Bad token; " .. tostring(err)})
   end
   
-  local msg_error_all = conf.msg_error_all
-  
-  local msg_error_any = conf.msg_error_any
-  local msg_error_not_roles_claimed = conf.msg_error_not_roles_claimed
-  local roles_cfg = conf.roles
+  local msg_error_all = config.msg_error_all
+  local msg_error_any = config.msg_error_any
+  local msg_error_not_roles_claimed = config.msg_error_not_roles_claimed
+  local roles_cfg = config.roles
+
   local claims = jwt.claims
-  local roles = claims[conf.roles_claim_name]
+  local roles = claims[config.roles_claim_name]
   local roles_table = {}
 
   -- check if no roles claimed..
@@ -154,7 +153,6 @@ function JWTAuthHandler:access(conf)
       message = msg_error_not_roles_claimed
     })
   end
-
 
   -- if the claim is a string (single role), make it a table
   if type(roles) == "string" then
@@ -167,34 +165,47 @@ function JWTAuthHandler:access(conf)
     end
     roles = roles_table
   end
-  if type(conf.roles) == "table" then
+
+
+  if type(config.roles) == "table" then
   -- in declarative db-less setup the roles can be separated by a space
-  if string.find(conf.roles[1], " ") then
-  conf_roles_table = split(conf.roles[1], " ")
-  end
-  if string.find(conf.roles[1], ",") then
-  conf_roles_table = split(conf.roles[1], ",")
-  end
-  conf.roles = conf_roles_table
-  end
-  if conf.policy == policy_ANY and not role_in_roles_claim(conf.roles, roles) then
+    if string.find(config.roles[1], " ") then
+    conf_roles_table = split(config.roles[1], " ")
+    end
+    
+    if string.find(config.roles[1], ",") then
+    conf_roles_table = split(config.roles[1], ",")
+    end
+    config.roles = conf_roles_table
+end
+
+
+
+
+if config.policy == policy_ANY and not role_in_roles_claim(roles_cfg, roles) then
+    kong.log.warn(roles_cfg)
+    kong.log.warn(roles)
     --return responses.send_HTTP_FORBIDDEN("You cannot consume this service")
     return kong.response.exit(403, {
       -- message = "You can't use these service"
-      detail = "The permitted role for this invocation is [" .. table.concat(roles_cfg,", ") .. "] and yours role are [" .. table.concat(roles,", ").."]",
+      -- detail = "The permitted role for this invocation is [" .. table.concat(roles_cfg,", ") .. "] and yours role are [" .. table.concat(roles,", ").."]",
       message = msg_error_any
 
     })
-  end
+end
 
-  if conf.policy == policy_ALL and not all_roles_in_roles_claim(conf.roles, roles) then
+
+
+if config.policy == policy_ALL and not all_roles_in_roles_claim(roles_cfg, roles) then
+    kong.log.warn(roles_cfg)
+    kong.log.warn(roles)
     --return responses.send_HTTP_FORBIDDEN("You cannot consume this service")
     return kong.response.exit(403, {
       -- message = "You can't use these service"
-      detail = "The permitted role for this invocation is [" .. table.concat(roles_cfg,", ") .. "] and yours role are [" .. table.concat(roles,", ").."]",
+      --detail = "The permitted role for this invocation is [" .. table.concat(roles_cfg,", ") .. "] and yours role are [" .. table.concat(roles,", ").."]",
       message = msg_error_all
     })
-  end
+end
 
 end
 -- End logic for the access phase here (http)

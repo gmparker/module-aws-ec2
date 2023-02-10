@@ -85,6 +85,7 @@ return {
         fields = {
     {roles = { type = "array", elements = { type = "string" }, }, },
     {roles_claim_name = {type = "string", default = "roles"}},
+	{debug = {type = "boolean", default = "false"}},
     {msg_error_any = {type = "string", default = "To be able to use this service you must have at least one of the roles configured"}},
     {msg_error_all = {type = "string", default = "In order to use this service you must match all the roles configured with the associated ones in the JWT token"}},
     {msg_error_not_roles_claimed = {type = "string", default = "The claim roles are not informed in the JWT token"}},
@@ -313,3 +314,22 @@ curl -X POST http://localhost:8001/consumers/acme_swift/jwt -H "Content-Type: ap
 	],
 	"next": null
 }
+
+
+
+# create private and public keys
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -outform PEM -pubout -out public.pem
+
+
+
+# create consumer and credential for JWT creation
+curl -d "username=acme_supply&custom_id=000003" http://localhost:8001/consumers/
+curl -X POST http://localhost:8001/consumers/acme_supply/jwt \
+-F "algorithm=RS256" \
+-F "rsa_public_key=@/home/ec2-user/public.pem"
+
+#Validate credential is set to RS256, if not, correct it accordingly
+
+# Return credential details just created
+curl -X GET http://localhost:8001/consumers/acme_supply/jwt

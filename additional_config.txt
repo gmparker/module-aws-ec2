@@ -212,11 +212,14 @@ curl -X POST http://localhost:8001/consumers/acme_trucking/key-auth
 curl -X POST http://localhost:8001/routes/swapi_films_route/plugins \
   --data "name=jwt" 
 
+-- Disable JWT Plugin - RunOnPreflight - false
+
+
 curl -d "username=acme_waste&custom_id=000002" http://localhost:8001/consumers/
-curl -X POST http://localhost:8001/consumers/acme_waste/jwt -H "Content-Type: application/x-www-form-urlencoded"
+curl -X POST http://localhost:8001/consumers/acme_supply/jwt -H "Content-Type: application/x-www-form-urlencoded"
 
 
-http://mykong.me:8001/consumers/acme_waste/jwt
+http://mykong.me:8001/consumers/acme_supply/jwt
 
 {
 	"data": [
@@ -246,20 +249,21 @@ http://mykong.me:8001/consumers/acme_waste/jwt
 #create jwt-auth-rbac plugin
 curl -X POST http://localhost:8001/plugins \
     --data 'name=jwt-auth-rbac' \
-    --data 'config.roles_claim_name=groups' \
-    --data 'config.roles=admin' \
-    --data 'config.msg_error_any=You do not have the necessary role to use this service' \
-    --data 'config.msg_error_all=You do not have the necessary role to use this service' \
-    --data 'config.msg_error_not_roles_claimed=You do not have the necessary role to use this service' \
-    --data 'config.policy=all'
+    --data 'config.roles_claim_name=roles' \
+    --data 'config.roles=read' \
+    --data 'config.msg_error_any=You do not have the necessary role to use this service - Any' \
+    --data 'config.msg_error_all=You do not have the necessary role to use this service - All' \
+    --data 'config.msg_error_not_roles_claimed=You do not have the necessary role to use this service - NRC' \
+    --data 'config.policy=any'
+
 
 
 
 
 
 #create consumer credential
-curl -d "username=acme_swift&custom_id=000003" http://localhost:8001/consumers/
-curl -X POST http://localhost:8001/consumers/acme_swift/jwt -H "Content-Type: application/x-www-form-urlencoded"
+curl -d "username=acme_supply&custom_id=000003" http://localhost:8001/consumers/
+curl -X POST http://localhost:8001/consumers/acme_supply/jwt -H "Content-Type: application/x-www-form-urlencoded"
 
 {
 	"data": [
@@ -286,6 +290,9 @@ openssl genrsa -out private.pem 2048
 openssl rsa -in private.pem -outform PEM -pubout -out public.pem
 
 
+-- create public.pem file on the Kong server in the ec2-user folder
+sudo cp public.pem /home/ec2-user/public.pem
+
 
 # create consumer and credential for JWT creation
 curl -d "username=acme_supply&custom_id=000003" http://localhost:8001/consumers/
@@ -297,3 +304,6 @@ curl -X POST http://localhost:8001/consumers/acme_supply/jwt \
 
 # Return credential details just created
 curl -X GET http://localhost:8001/consumers/acme_supply/jwt
+
+
+-- iss = key: BOPDs6xXsDleF95SaMDRiLWcrkBKL4ij

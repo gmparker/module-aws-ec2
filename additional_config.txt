@@ -56,47 +56,11 @@ cd /home/ec2-user/.luarocks/share/lua/5.1/kong/plugins/jwt-auth-rbac
 
 sudo nano handler.lua
 
-local JWTAuthHandler = {
-  VERSION  = "0.1.0",
-  PRIORITY = 950,
-}
-
---local BasePlugin = require "
---local JWTAuthHandler = BasePlugin:extend()
---JWTAuthHandler.PRIORITY = 950
---JWTAuthHandler.VERSION = "0.1.0"
-
-
 
 #modify schema.lua file
 sudo cp schema.lua schema.lua.bak
 sudo rm schema.lua
 sudo nano schema.lua
-
-local typedefs = require "kong.db.schema.typedefs"
-
-return {
-  name = "jwt-auth-rbac",
-  fields = {
-    { consumer = typedefs.no_consumer },
-    { protocols = typedefs.protocols_http },
-    { config = {
-        type = "record",
-        fields = {
-    {roles = { type = "array", elements = { type = "string" }, }, },
-    {roles_claim_name = {type = "string", default = "roles"}},
-	{debug = {type = "boolean", default = "false"}},
-    {msg_error_any = {type = "string", default = "To be able to use this service you must have at least one of the roles configured"}},
-    {msg_error_all = {type = "string", default = "In order to use this service you must match all the roles configured with the associated ones in the JWT token"}},
-    {msg_error_not_roles_claimed = {type = "string", default = "The claim roles are not informed in the JWT token"}},
-    {policy = {type = "string", default = "any", one_of = {"any", "all"}}}
-        },
-      },
-    },
-  },
-}
-
-
 
 
 

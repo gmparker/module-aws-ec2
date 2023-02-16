@@ -54,6 +54,8 @@ luarocks make kong-plugin-jwt-auth-rbac-0.1.0-1.rockspec --local
 
 cd /home/ec2-user/.luarocks/share/lua/5.1/kong/plugins/jwt-auth-rbac
 
+#modify handler.lua file
+sudo rm handler.lua
 sudo nano handler.lua
 
 
@@ -66,12 +68,32 @@ sudo nano schema.lua
 
 echo "lua-package-path = /home/ec2-user/.luarocks/share/lua/5.1/?.lua;;" | sudo tee -a /etc/kong/kong.conf
 echo "plugins = bundled,jwt-auth-rbac" | sudo tee -a /etc/kong/kong.conf
---sudo nano /etc/kong/kong.conf
+#sudo nano /etc/kong/kong.conf
+
+#create migrations subdirectory
+
+mkdir migrations
+cd migrations
+
+#create init.lua file
+sudo nano init.lua
 
 
+#create sudo nano 000_jwt_auth_rbac.lua file
+sudo nano 000_jwt_auth_rbac.lua
+
+
+#change back to main directory
+cd ..
+
+#create daos.lua file
+sudo nano daos.lua
+
+#run migrations update
+sudo /usr/local/bin/kong migrations up
+
+#restart kong
 sudo /usr/local/bin/kong restart
-
-
 
 
 #create service
@@ -212,10 +234,10 @@ curl -X POST http://localhost:8001/consumers/acme_trucking/key-auth
 curl -X POST http://localhost:8001/routes/swapi_films_route/plugins \
   --data "name=jwt" 
 
--- Disable JWT Plugin - RunOnPreflight - false
+#Disable JWT Plugin - RunOnPreflight - false
 
-
-curl -d "username=acme_waste&custom_id=000002" http://localhost:8001/consumers/
+#create consumer and jwt credential
+curl -d "username=acme_supply&custom_id=000001" http://localhost:8001/consumers/
 curl -X POST http://localhost:8001/consumers/acme_supply/jwt -H "Content-Type: application/x-www-form-urlencoded"
 
 
@@ -224,30 +246,23 @@ http://mykong.me:8001/consumers/acme_supply/jwt
 {
 	"data": [
 		{
-			"id": "c9d2d611-358c-47d4-8410-f35d654e4514",
 			"consumer": {
-				"id": "1a43c99d-e8e9-40a6-92ee-28b9c97c3460"
+				"id": "50e6a363-5a79-452e-929f-abf4466a4ab7"
 			},
+			"tags": null,
+			"created_at": 1676479958,
+			"key": "9tanG2UlJcvhWlk37xhc6xXknvsaDgSK",
+			"secret": "gGvJ7WaeEweSLBHKbIcLvG4jfaWVGxz0",
+			"id": "f307aeb9-7af9-4be8-8791-f79baca36d6a",
 			"algorithm": "HS256",
-			"rsa_public_key": null,
-			"key": "4QzErqaAGlDzwBY2fpFIOs2By9xupDL1",
-			"secret": "9qmJRNeMHUUHONVK1b6VZzT3dUrgdUE8",
-			"created_at": 1675693746,
-			"tags": null
+			"rsa_public_key": null
 		}
 	],
 	"next": null
 }
 
-
--- iss - key, secret key, add exp epoch format
--- "exp" : 1699999999
-
-
-
-
 #create jwt-auth-rbac plugin
-curl -X POST http://localhost:8001/plugins \
+curl -X POST http://localhost:8001/routes/swapi_films_route/plugins \
     --data 'name=jwt-auth-rbac' \
     --data 'config.roles_claim_name=roles' \
     --data 'config.roles=read' \
@@ -259,51 +274,45 @@ curl -X POST http://localhost:8001/plugins \
 
 
 
-
-
-#create consumer credential
-curl -d "username=acme_supply&custom_id=000003" http://localhost:8001/consumers/
-curl -X POST http://localhost:8001/consumers/acme_supply/jwt -H "Content-Type: application/x-www-form-urlencoded"
-
-{
-	"data": [
-		{
-			"algorithm": "HS256",
-			"key": "UWnJwuhOSfZuHZArY0qjyWLB462tMAE0",
-			"consumer": {
-				"id": "cb063dbd-261c-486e-941f-2fe54eb27a7b"
-			},
-			"secret": "BcO5gtGkbDd4nxxiOAEnr71sYrpKwOFq",
-			"rsa_public_key": null,
-			"created_at": 1675445193,
-			"tags": null,
-			"id": "7fab7677-04b0-4ee6-bb33-d256727df4a5"
-		}
-	],
-	"next": null
-}
-
-
-
 # create private and public keys
 openssl genrsa -out private.pem 2048
 openssl rsa -in private.pem -outform PEM -pubout -out public.pem
 
 
--- create public.pem file on the Kong server in the ec2-user folder
+# create public.pem file on the Kong server in the ec2-user folder
 sudo cp public.pem /home/ec2-user/public.pem
 
 
 # create consumer and credential for JWT creation
-curl -d "username=acme_supply&custom_id=000003" http://localhost:8001/consumers/
-curl -X POST http://localhost:8001/consumers/acme_supply/jwt \
+curl -d "username=acme_waste&custom_id=000002" http://localhost:8001/consumers/
+curl -X POST http://localhost:8001/consumers/acme_waste/jwt \
 -F "algorithm=RS256" \
 -F "rsa_public_key=@/home/ec2-user/public.pem"
 
 #Validate credential is set to RS256, if not, correct it accordingly
 
 # Return credential details just created
-curl -X GET http://localhost:8001/consumers/acme_supply/jwt
+curl -X GET http://mykong.me:8001/consumers/acme_waste/jwt
 
 
--- iss = key: BOPDs6xXsDleF95SaMDRiLWcrkBKL4ij
+-- iss = key: TJU33qFIbKpS7PbDDnPM0RyUlNs00ajw
+
+{
+	"data": [
+		{
+			"key": "TJU33qFIbKpS7PbDDnPM0RyUlNs00ajw",
+			"created_at": 1676483261,
+			"consumer": {
+				"id": "730287af-7f3e-44a1-9ae9-a06b48cf5e2f"
+			},
+			"algorithm": "RS256",
+			"id": "e10257a8-311a-42ec-830b-5d7740878578",
+			"rsa_public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxITi3zDBeVfl0sxdWEaf\nU6wujM7k9OEpKKECT/dLihYuO+ViZjQW+uoinepjHNIcU9159rFnBfGJ545wnxnh\nFAnW2b1O7eo06yYdbacUds+ueGWG+nmrdSPq54x/r+ysvWyoQEy999LL7QC5GL0r\nzScRqfHqITFm0BzBWCHYnCboKjVe/odDNquPt/2hWnd+h5btof8IiK806dSWAlcF\nCZCMcSSYkRXEveDq40FNFJwklZKk3FZnIjY2VMysrAzrq8g9q1Yak/jsQUC6dH1q\n7os4IclBPS/iD34k+vHAhO/GOg3qt9fsKSieZhhnKjN6vj49aqZz2dJ0zWpD90Vk\nYQIDAQAB\n-----END PUBLIC KEY-----\n",
+			"tags": null,
+			"secret": "9wt5GC0A9cmPX5imZUdT7Lj43SiVbvQC"
+		}
+	],
+	"next": null
+}
+
+-- Add data to postgreSQL database

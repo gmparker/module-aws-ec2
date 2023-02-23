@@ -41,6 +41,7 @@ sudo /usr/local/bin/kong start -c /etc/kong/kong.conf
 
 
 
+https://github.com/gmparker/module-kong-plugin-jwt/archive/refs/heads/main.zip
 
 
 sudo cd /home/kong
@@ -189,6 +190,7 @@ curl -X PATCH  http://localhost:8001/routes/swapi_people_route/plugins \
 -- demo maintenance window (enable plugin, validate, disable plugin, validate)
 
 
+curl -X GET http://localhost:8001/jwt-auth-rbac/02595
 
 #configure bot detection plugin globally
 curl -X POST http://localhost:8001/plugins/ \
@@ -234,7 +236,7 @@ curl -X POST http://localhost:8001/consumers/acme_trucking/key-auth
 curl -X POST http://localhost:8001/routes/swapi_films_route/plugins \
   --data "name=jwt" 
 
-#Disable JWT Plugin - RunOnPreflight - false
+
 
 #create consumer and jwt credential
 curl -d "username=acme_supply&custom_id=000001" http://localhost:8001/consumers/
@@ -316,3 +318,6 @@ curl -X GET http://mykong.me:8001/consumers/acme_waste/jwt
 }
 
 -- Add data to postgreSQL database
+
+
+
